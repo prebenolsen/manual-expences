@@ -177,3 +177,4 @@ window.ENV = {
 Filen inneholder kolonnene: `year`, `month`, `day`, `dd-mm-yyyy`, `category`, `store`, `sum`, `note`.
 
 Filen er lagret med UTF-8 BOM slik at Excel på Windows åpner norske tegn (ø, æ, å) korrekt uten ekstra innstillinger.
+
