@@ -1,8 +1,8 @@
 // --- Supabase init ---
-if (!window.ENV || !window.ENV.SUPABASE_URL) {
-  document.getElementById('login-feil').textContent = 'Konfigurasjonsfeil: env.js mangler eller inneholder tomme verdier.';
+if (!window.ENV || !window.ENV.SUPABASE_URL || window.ENV.SUPABASE_URL.startsWith('PLACEHOLDER')) {
+  document.getElementById('login-feil').textContent = 'Konfigurasjonsfeil: Supabase-nøkler mangler. Sjekk GitHub Secrets og deploy på nytt.';
   document.getElementById('login-feil').className = 'feil';
-  throw new Error('env.js ikke lastet');
+  throw new Error('Supabase-nøkler ikke konfigurert');
 }
 const { createClient } = supabase;
 const db = createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);

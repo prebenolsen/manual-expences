@@ -24,14 +24,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject credentials into env.js
+      - name: Inject credentials into index.html
         run: |
-          cat > env.js << 'ENVEOF'
-          window.ENV = {
-            SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
-            SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}"
-          };
-          ENVEOF
+          sed -i 's|PLACEHOLDER_SUPABASE_URL|${{ secrets.SUPABASE_URL }}|g' index.html
+          sed -i 's|PLACEHOLDER_SUPABASE_ANON_KEY|${{ secrets.SUPABASE_ANON_KEY }}|g' index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
