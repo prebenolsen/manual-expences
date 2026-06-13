@@ -5,6 +5,7 @@ En PWA (Progressive Web App) for å registrere og eksportere personlige utgifter
 **Funksjoner:**
 - Krever innlogging – kun din konto har tilgang
 - Legg til utgifter med dato, kategori, butikk, beløp og notat
+- Legg til nye kategorier og butikker direkte i appen – lagres i Supabase
 - Lagring i Supabase
 - Eksporter til CSV (åpnes korrekt i Excel med norske tegn)
 - Fungerer offline for app-skallet (krever internett for å lagre/hente data)
@@ -16,9 +17,10 @@ En PWA (Progressive Web App) for å registrere og eksportere personlige utgifter
 ### 1. Opprett Supabase-prosjekt
 
 1. Gå til [supabase.com](https://supabase.com) og opprett et nytt prosjekt.
-2. Når prosjektet er klart, gå til **SQL Editor** og kjør følgende SQL for å opprette tabellen og RLS-policyer:
+2. Når prosjektet er klart, gå til **SQL Editor** og kjør følgende SQL for å opprette tabellene og RLS-policyer:
 
 ```sql
+-- Utgifter
 create table expenses (
   id           uuid primary key default gen_random_uuid(),
   created_at   timestamptz not null default now(),
@@ -36,9 +38,28 @@ create policy "Allow authenticated insert"
 
 create policy "Allow authenticated select"
   on expenses for select to authenticated using (true);
+
+-- Egendefinerte kategorier og butikker (per bruker)
+create table custom_options (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users(id) on delete cascade not null default auth.uid(),
+  category   text not null,
+  store      text not null default '',
+  created_at timestamptz not null default now(),
+  unique (user_id, category, store)
+);
+
+alter table custom_options enable row level security;
+
+create policy "Users manage own options"
+  on custom_options for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 ```
 
 > **Merk:** Policyer bruker `authenticated`-rollen, ikke `anon`. Det betyr at kun innloggede brukere kan lese og skrive data.
+>
+> `custom_options` er per bruker – hver bruker har sin egen liste med kategorier og butikker.
 
 ### 2. Opprett bruker
 
@@ -97,22 +118,20 @@ https://prebenolsen.github.io/manual-expences/
 
 ## Tilpassing
 
-### Legg til kategorier og butikker
+### Legg til kategorier og butikker i appen
 
-Rediger `config.js`. Strukturen er:
+Når du er innlogget kan du legge til nye kategorier og butikker direkte i skjemaet:
 
-```js
-window.APP_CONFIG = {
-  defaultCategory: 'Matvarer',
-  categories: {
-    'NyKategori': {
-      stores: ['Butikk 1', 'Butikk 2']
-    }
-  }
-};
-```
+- Trykk **+ Ny kategori** under kategorilisten for å opprette en ny kategori.
+- Trykk **+ Ny butikk** under butikklisten for å legge til en ny butikk under valgt kategori.
 
-Push endringen til `main` – GitHub Actions deployer automatisk.
+Nye oppføringer lagres øyeblikkelig i Supabase og er tilgjengelige ved neste innlogging.
+
+**Første innlogging:** Appen seeder automatisk `custom_options`-tabellen med standardverdiene fra `config.js`. Fra da av er Supabase kilden til alle kategorier og butikker.
+
+### Endre standardkategorier (config.js)
+
+`config.js` brukes kun som startseed ved første innlogging. Ønsker du å endre standardsettet for nye installasjoner, rediger `config.js` og opprett en ny bruker (eller tøm `custom_options`-raden for din bruker i Supabase). Eksisterende brukere beholder sine lagrede valg i Supabase.
 
 ### Bytt ut ikoner
 

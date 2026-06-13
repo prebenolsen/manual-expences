@@ -7,6 +7,9 @@ if (!window.ENV || !window.ENV.SUPABASE_URL || window.ENV.SUPABASE_URL.startsWit
 const { createClient } = supabase;
 const db = createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
 
+// --- Globale data ---
+let appKategorier = {};
+
 // --- Helpers ---
 function osloDateString() {
   // sv-SE locale produces YYYY-MM-DD which <input type="date"> requires
@@ -49,7 +52,7 @@ db.auth.onAuthStateChange((_event, session) => {
 // --- Innlogging ---
 document.getElementById('login-form').addEventListener('submit', async e => {
   e.preventDefault();
-  const btn   = document.getElementById('login-btn');
+  const btn    = document.getElementById('login-btn');
   const feilEl = document.getElementById('login-feil');
   btn.disabled = true;
   btn.textContent = 'Logger inn…';
@@ -75,15 +78,59 @@ document.getElementById('logg-ut-btn').addEventListener('click', async () => {
   await db.auth.signOut();
 });
 
+// --- Last kategorier fra Supabase ---
+async function lastKategorier() {
+  const { data, error } = await db
+    .from('custom_options')
+    .select('category, store')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    // Tabellen finnes ikke ennå – fall tilbake til config.js
+    console.warn('custom_options ikke tilgjengelig, bruker config.js:', error.message);
+    brukKonfigurasjonsdata();
+    return;
+  }
+
+  if (!data.length) {
+    await frøKategorier();
+    return lastKategorier();
+  }
+
+  appKategorier = {};
+  data.forEach(({ category, store }) => {
+    if (!appKategorier[category]) appKategorier[category] = [];
+    if (store) appKategorier[category].push(store);
+  });
+}
+
+function brukKonfigurasjonsdata() {
+  appKategorier = {};
+  Object.entries(window.APP_CONFIG.categories).forEach(([kat, { stores }]) => {
+    appKategorier[kat] = [...stores];
+  });
+}
+
+async function frøKategorier() {
+  const rader = [];
+  Object.entries(window.APP_CONFIG.categories).forEach(([kat, { stores }]) => {
+    rader.push({ category: kat, store: '' });
+    stores.forEach(s => rader.push({ category: kat, store: s }));
+  });
+  const { error } = await db.from('custom_options').insert(rader);
+  if (error) console.error('Feil ved seeding av kategorier:', error);
+}
+
 // --- Populer kategorier ---
 function populerKategorier() {
   const sel = document.getElementById('kategori');
-  const cfg = window.APP_CONFIG;
-  Object.keys(cfg.categories).forEach(kat => {
+  sel.innerHTML = '';
+  const defaultKat = window.APP_CONFIG.defaultCategory;
+  Object.keys(appKategorier).forEach(kat => {
     const opt = document.createElement('option');
     opt.value = kat;
     opt.textContent = kat;
-    if (kat === cfg.defaultCategory) opt.selected = true;
+    if (kat === defaultKat) opt.selected = true;
     sel.appendChild(opt);
   });
   populerButikker(sel.value);
@@ -93,7 +140,7 @@ function populerKategorier() {
 function populerButikker(kategori) {
   const sel = document.getElementById('butikk');
   sel.innerHTML = '';
-  const butikker = window.APP_CONFIG.categories[kategori]?.stores ?? [];
+  const butikker = appKategorier[kategori] ?? [];
   butikker.forEach(b => {
     const opt = document.createElement('option');
     opt.value = b;
@@ -104,6 +151,86 @@ function populerButikker(kategori) {
 
 document.getElementById('kategori').addEventListener('change', e => {
   populerButikker(e.target.value);
+});
+
+// --- Ny kategori ---
+document.getElementById('ny-kategori-toggle').addEventListener('click', () => {
+  const rad = document.getElementById('ny-kategori-rad');
+  rad.classList.toggle('skjult');
+  if (!rad.classList.contains('skjult')) document.getElementById('ny-kategori-input').focus();
+});
+
+document.getElementById('ny-kategori-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ny-kategori-btn').click(); }
+});
+
+document.getElementById('ny-kategori-btn').addEventListener('click', async () => {
+  const input = document.getElementById('ny-kategori-input');
+  const navn = input.value.trim();
+  if (!navn) return;
+
+  if (appKategorier[navn] !== undefined) {
+    visStatus('Kategorien finnes allerede.', 'feil');
+    return;
+  }
+
+  const { error } = await db.from('custom_options').insert({ category: navn, store: '' });
+  if (error) { visStatus('Feil: ' + error.message, 'feil'); return; }
+
+  appKategorier[navn] = [];
+
+  const sel = document.getElementById('kategori');
+  const opt = document.createElement('option');
+  opt.value = navn;
+  opt.textContent = navn;
+  sel.appendChild(opt);
+  sel.value = navn;
+  populerButikker(navn);
+
+  input.value = '';
+  document.getElementById('ny-kategori-rad').classList.add('skjult');
+  visStatus(`Kategori "${navn}" lagt til.`, 'suksess');
+});
+
+// --- Ny butikk ---
+document.getElementById('ny-butikk-toggle').addEventListener('click', () => {
+  const rad = document.getElementById('ny-butikk-rad');
+  rad.classList.toggle('skjult');
+  if (!rad.classList.contains('skjult')) document.getElementById('ny-butikk-input').focus();
+});
+
+document.getElementById('ny-butikk-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ny-butikk-btn').click(); }
+});
+
+document.getElementById('ny-butikk-btn').addEventListener('click', async () => {
+  const input = document.getElementById('ny-butikk-input');
+  const navn = input.value.trim();
+  const kategori = document.getElementById('kategori').value;
+  if (!navn || !kategori) return;
+
+  const eksisterende = appKategorier[kategori] ?? [];
+  if (eksisterende.includes(navn)) {
+    visStatus('Butikken finnes allerede i denne kategorien.', 'feil');
+    return;
+  }
+
+  const { error } = await db.from('custom_options').insert({ category: kategori, store: navn });
+  if (error) { visStatus('Feil: ' + error.message, 'feil'); return; }
+
+  if (!appKategorier[kategori]) appKategorier[kategori] = [];
+  appKategorier[kategori].push(navn);
+
+  const sel = document.getElementById('butikk');
+  const opt = document.createElement('option');
+  opt.value = navn;
+  opt.textContent = navn;
+  sel.appendChild(opt);
+  sel.value = navn;
+
+  input.value = '';
+  document.getElementById('ny-butikk-rad').classList.add('skjult');
+  visStatus(`Butikk "${navn}" lagt til under "${kategori}".`, 'suksess');
 });
 
 // --- Skjema: lagre utgift ---
@@ -210,9 +337,10 @@ document.getElementById('eksport-btn').addEventListener('click', async () => {
 });
 
 // --- Init (kjøres én gang etter innlogging) ---
-function initApp() {
+async function initApp() {
   document.getElementById('dato').value = osloDateString();
   document.getElementById('eksport-ar').value = osloDateString().slice(0, 4);
+  await lastKategorier();
   populerKategorier();
 
   if ('serviceWorker' in navigator) {
