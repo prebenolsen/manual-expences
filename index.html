@@ -91,6 +91,35 @@
       </div>
 
       <div class="card">
+        <h2>Mine utgifter</h2>
+        <div class="filter-rad">
+          <div class="field">
+            <label for="vis-ar">År</label>
+            <input type="number" id="vis-ar" min="2020" max="2099" step="1">
+          </div>
+          <div class="field">
+            <label for="vis-maned">Måned</label>
+            <select id="vis-maned">
+              <option value="1">Januar</option>
+              <option value="2">Februar</option>
+              <option value="3">Mars</option>
+              <option value="4">April</option>
+              <option value="5">Mai</option>
+              <option value="6">Juni</option>
+              <option value="7">Juli</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" id="hent-btn" class="btn btn-secondary">Hent</button>
+        <div id="utgifter-liste"></div>
+      </div>
+
+      <div class="card">
         <h2>Eksporter til CSV</h2>
         <div class="eksport-rad">
           <div class="field">
@@ -119,6 +148,42 @@
         <button type="button" id="eksport-btn" class="btn btn-secondary">Last ned CSV</button>
       </div>
     </main>
+  </div>
+
+  <!-- Redigeringsmodal -->
+  <div id="modal-bakgrunn" class="modal-bakgrunn skjult"
+       role="dialog" aria-modal="true" aria-labelledby="modal-tittel">
+    <div class="modal-kort">
+      <h2 id="modal-tittel">Rediger utgift</h2>
+      <form id="rediger-form">
+        <input type="hidden" id="rediger-id">
+        <div class="field">
+          <label for="rediger-dato">Dato</label>
+          <input type="date" id="rediger-dato" required>
+        </div>
+        <div class="field">
+          <label for="rediger-kategori">Kategori</label>
+          <select id="rediger-kategori" required></select>
+        </div>
+        <div class="field">
+          <label for="rediger-butikk">Butikk</label>
+          <select id="rediger-butikk" required></select>
+        </div>
+        <div class="field">
+          <label for="rediger-belop">Beløp (kr)</label>
+          <input type="number" id="rediger-belop" inputmode="numeric"
+                 min="1" step="1" required placeholder="0">
+        </div>
+        <div class="field">
+          <label for="rediger-notat">Notat (valgfritt)</label>
+          <input type="text" id="rediger-notat" placeholder="Legg til notat...">
+        </div>
+        <div class="modal-handlinger">
+          <button type="button" id="avbryt-btn" class="btn btn-secondary">Avbryt</button>
+          <button type="submit" id="lagre-rediger-btn" class="btn btn-primary">Lagre</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>

@@ -23,6 +23,15 @@ function visStatus(tekst, type) {
   if (tekst) setTimeout(() => { el.textContent = ''; el.className = ''; }, 4000);
 }
 
+// Escape user-supplied strings before inserting into innerHTML
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // --- Auth: vis/skjul skjermer ---
 function visApp() {
   document.getElementById('login-skjerm').classList.add('skjult');
@@ -268,10 +277,185 @@ document.getElementById('expense-form').addEventListener('submit', async e => {
     document.getElementById('belop').value = '';
     document.getElementById('notat').value = '';
     document.getElementById('dato').value = osloDateString();
+    lastUtgifter();
   }
 
   btn.disabled = false;
   btn.textContent = 'Lagre utgift';
+});
+
+// --- Mine utgifter: hent og vis liste ---
+async function lastUtgifter() {
+  const ar    = document.getElementById('vis-ar').value;
+  const maned = document.getElementById('vis-maned').value.padStart(2, '0');
+  const sisteDag = new Date(parseInt(ar, 10), parseInt(maned, 10), 0).getDate();
+  const fraDato  = `${ar}-${maned}-01`;
+  const tilDato  = `${ar}-${maned}-${String(sisteDag).padStart(2, '0')}`;
+
+  const { data, error } = await db
+    .from('expenses')
+    .select('id, expense_date, category, store, amount, note')
+    .gte('expense_date', fraDato)
+    .lte('expense_date', tilDato)
+    .order('expense_date', { ascending: false });
+
+  if (error) { console.error('Feil ved henting av utgifter:', error); return; }
+  visUtgifterListe(data ?? []);
+}
+
+function visUtgifterListe(data) {
+  const liste = document.getElementById('utgifter-liste');
+
+  if (!data.length) {
+    liste.innerHTML = '<p class="tom-liste">Ingen utgifter denne måneden.</p>';
+    return;
+  }
+
+  const total = data.reduce((sum, u) => sum + u.amount, 0);
+  const totalStr = total.toLocaleString('nb-NO');
+
+  liste.innerHTML = `<p class="utgifter-total">${data.length} poster · ${totalStr} kr</p>`;
+
+  data.forEach(u => {
+    const [y, mo, d] = u.expense_date.split('-');
+    const datoStr = `${d}.${mo}.${y}`;
+
+    const rad = document.createElement('div');
+    rad.className = 'utgift-rad';
+    rad.innerHTML = `
+      <div class="utgift-topp">
+        <span class="utgift-dato">${esc(datoStr)}</span>
+        <span class="utgift-belop">${u.amount.toLocaleString('nb-NO')} kr</span>
+      </div>
+      <div class="utgift-bunn">
+        <span class="utgift-kat">${esc(u.category)} · ${esc(u.store)}</span>
+        <div class="utgift-handlinger">
+          <button class="btn-rediger" type="button">Rediger</button>
+          <button class="btn-slett" type="button">Slett</button>
+        </div>
+      </div>
+      ${u.note ? `<p class="utgift-notat">${esc(u.note)}</p>` : ''}
+    `;
+
+    rad.querySelector('.btn-rediger').addEventListener('click', () => apneRedigerModal(u));
+    rad.querySelector('.btn-slett').addEventListener('click', () => slettUtgift(u.id, rad));
+
+    liste.appendChild(rad);
+  });
+}
+
+document.getElementById('hent-btn').addEventListener('click', lastUtgifter);
+
+// --- Slett utgift ---
+async function slettUtgift(id, radEl) {
+  if (!confirm('Slett denne utgiften?')) return;
+
+  const { error } = await db.from('expenses').delete().eq('id', id);
+  if (error) { alert('Feil ved sletting: ' + error.message); return; }
+
+  // Remove row and update total
+  radEl.remove();
+  const gjenstående = document.querySelectorAll('#utgifter-liste .utgift-rad');
+  if (!gjenstående.length) {
+    document.getElementById('utgifter-liste').innerHTML = '<p class="tom-liste">Ingen utgifter denne måneden.</p>';
+    return;
+  }
+  // Recalculate total from remaining rows
+  lastUtgifter();
+}
+
+// --- Redigeringsmodal ---
+function populerRedigerButikker(kategori, valgtButikk) {
+  const sel = document.getElementById('rediger-butikk');
+  sel.innerHTML = '';
+  const butikker = appKategorier[kategori] ?? [];
+  butikker.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = b;
+    if (b === valgtButikk) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  // If the stored store isn't in the list, add it so the form still shows the correct value
+  if (valgtButikk && !butikker.includes(valgtButikk)) {
+    const opt = document.createElement('option');
+    opt.value = valgtButikk;
+    opt.textContent = valgtButikk;
+    opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function apneRedigerModal(utgift) {
+  document.getElementById('rediger-id').value    = utgift.id;
+  document.getElementById('rediger-dato').value  = utgift.expense_date;
+  document.getElementById('rediger-belop').value = utgift.amount;
+  document.getElementById('rediger-notat').value = utgift.note ?? '';
+
+  const katSel = document.getElementById('rediger-kategori');
+  katSel.innerHTML = '';
+  Object.keys(appKategorier).forEach(kat => {
+    const opt = document.createElement('option');
+    opt.value = kat;
+    opt.textContent = kat;
+    if (kat === utgift.category) opt.selected = true;
+    katSel.appendChild(opt);
+  });
+  if (!appKategorier[utgift.category]) {
+    const opt = document.createElement('option');
+    opt.value = utgift.category;
+    opt.textContent = utgift.category;
+    opt.selected = true;
+    katSel.appendChild(opt);
+  }
+
+  populerRedigerButikker(utgift.category, utgift.store);
+
+  document.getElementById('modal-bakgrunn').classList.remove('skjult');
+  document.getElementById('rediger-dato').focus();
+}
+
+function lukkRedigerModal() {
+  document.getElementById('modal-bakgrunn').classList.add('skjult');
+}
+
+document.getElementById('avbryt-btn').addEventListener('click', lukkRedigerModal);
+
+document.getElementById('modal-bakgrunn').addEventListener('click', e => {
+  if (e.target === e.currentTarget) lukkRedigerModal();
+});
+
+document.getElementById('rediger-kategori').addEventListener('change', e => {
+  populerRedigerButikker(e.target.value, '');
+});
+
+document.getElementById('rediger-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('lagre-rediger-btn');
+  btn.disabled = true;
+  btn.textContent = 'Lagrer…';
+
+  const id       = document.getElementById('rediger-id').value;
+  const dato     = document.getElementById('rediger-dato').value;
+  const kategori = document.getElementById('rediger-kategori').value;
+  const butikk   = document.getElementById('rediger-butikk').value;
+  const belop    = parseInt(document.getElementById('rediger-belop').value, 10);
+  const notat    = document.getElementById('rediger-notat').value.trim() || null;
+
+  const { error } = await db
+    .from('expenses')
+    .update({ expense_date: dato, category: kategori, store: butikk, amount: belop, note: notat })
+    .eq('id', id);
+
+  if (error) {
+    alert('Feil ved oppdatering: ' + error.message);
+  } else {
+    lukkRedigerModal();
+    lastUtgifter();
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Lagre';
 });
 
 // --- Eksport til CSV ---
@@ -338,10 +522,15 @@ document.getElementById('eksport-btn').addEventListener('click', async () => {
 
 // --- Init (kjøres én gang etter innlogging) ---
 async function initApp() {
-  document.getElementById('dato').value = osloDateString();
-  document.getElementById('eksport-ar').value = osloDateString().slice(0, 4);
+  const iDag = osloDateString();
+  document.getElementById('dato').value        = iDag;
+  document.getElementById('eksport-ar').value  = iDag.slice(0, 4);
+  document.getElementById('vis-ar').value      = iDag.slice(0, 4);
+  document.getElementById('vis-maned').value   = String(parseInt(iDag.slice(5, 7), 10));
+
   await lastKategorier();
   populerKategorier();
+  lastUtgifter();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/manual-expences/sw.js');

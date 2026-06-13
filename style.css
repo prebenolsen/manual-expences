@@ -253,6 +253,164 @@ input[type="number"] {
   gap: 12px;
 }
 
+/* --- Mine utgifter: liste --- */
+.filter-rad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.utgifter-total {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 14px 0 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tom-liste {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0 4px;
+}
+
+.utgift-rad {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.utgift-rad:last-child {
+  border-bottom: none;
+}
+
+.utgift-topp {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.utgift-dato {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.utgift-belop {
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.utgift-bunn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.utgift-kat {
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.utgift-handlinger {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-rediger,
+.btn-slett {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.btn-rediger {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+.btn-rediger:hover {
+  background: #d4eddf;
+}
+
+.btn-slett {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.btn-slett:hover {
+  background: #f9d4d0;
+}
+
+.utgift-notat {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* --- Redigeringsmodal --- */
+.modal-bakgrunn {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-kort {
+  background: #fff;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 24px 20px 32px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 92dvh;
+  overflow-y: auto;
+}
+
+@media (min-width: 500px) {
+  .modal-bakgrunn {
+    align-items: center;
+    padding: var(--gap);
+  }
+  .modal-kort {
+    border-radius: var(--radius);
+    padding-bottom: 24px;
+  }
+}
+
+.modal-kort h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--green-dark);
+  margin-bottom: 16px;
+}
+
+.modal-handlinger {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* --- Ny kategori/butikk inline --- */
 .btn-legg-til {
   background: none;
   border: none;

@@ -6,6 +6,7 @@ En PWA (Progressive Web App) for å registrere og eksportere personlige utgifter
 - Krever innlogging – kun din konto har tilgang
 - Legg til utgifter med dato, kategori, butikk, beløp og notat
 - Legg til nye kategorier og butikker direkte i appen – lagres i Supabase
+- Se, rediger og slett egne utgifter med månedsoversikt
 - Lagring i Supabase
 - Eksporter til CSV (åpnes korrekt i Excel med norske tegn)
 - Fungerer offline for app-skallet (krever internett for å lagre/hente data)
@@ -38,6 +39,12 @@ create policy "Allow authenticated insert"
 
 create policy "Allow authenticated select"
   on expenses for select to authenticated using (true);
+
+create policy "Allow authenticated update"
+  on expenses for update to authenticated using (true) with check (true);
+
+create policy "Allow authenticated delete"
+  on expenses for delete to authenticated using (true);
 
 -- Egendefinerte kategorier og butikker (per bruker)
 create table custom_options (
@@ -117,6 +124,13 @@ https://prebenolsen.github.io/manual-expences/
 ---
 
 ## Tilpassing
+
+### Se, rediger og slett utgifter
+
+Etter innlogging vises seksjonen **Mine utgifter** med alle poster for inneværende måned. Bruk år/måned-filteret og trykk **Hent** for å bytte periode.
+
+- **Rediger**: Åpner et skjema med alle felt forhåndsutfylt – lagre oppdaterer raden umiddelbart.
+- **Slett**: Ber om bekreftelse, deretter fjernes raden permanent fra Supabase.
 
 ### Legg til kategorier og butikker i appen
 
