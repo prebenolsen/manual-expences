@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a6b3c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Utgifter">
+  <title>Utgiftssporing</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Innloggingsskjerm -->
+  <div id="login-skjerm">
+    <div class="login-kort">
+      <h1>Utgiftssporing</h1>
+      <form id="login-form">
+        <div class="field">
+          <label for="epost">E-post</label>
+          <input type="email" id="epost" required autocomplete="email"
+                 placeholder="din@epost.no">
+        </div>
+        <div class="field">
+          <label for="passord">Passord</label>
+          <input type="password" id="passord" required autocomplete="current-password"
+                 placeholder="••••••••">
+        </div>
+        <button type="submit" id="login-btn" class="btn btn-primary">Logg inn</button>
+        <div id="login-feil" role="alert" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- App (skjult til innlogget) -->
+  <div id="app-skjerm" class="skjult">
+    <header>
+      <h1>Utgiftssporing</h1>
+      <button type="button" id="logg-ut-btn" class="btn-logg-ut">Logg ut</button>
+    </header>
+
+    <main>
+      <div class="card">
+        <h2>Legg til utgift</h2>
+        <form id="expense-form">
+          <div class="field">
+            <label for="dato">Dato</label>
+            <input type="date" id="dato" name="dato" required>
+          </div>
+
+          <div class="field">
+            <label for="kategori">Kategori</label>
+            <select id="kategori" name="kategori" required></select>
+          </div>
+
+          <div class="field">
+            <label for="butikk">Butikk</label>
+            <select id="butikk" name="butikk" required></select>
+          </div>
+
+          <div class="field">
+            <label for="belop">Beløp (kr)</label>
+            <input type="number" id="belop" name="belop"
+                   inputmode="numeric" min="1" step="1" required
+                   placeholder="0">
+          </div>
+
+          <div class="field">
+            <label for="notat">Notat (valgfritt)</label>
+            <input type="text" id="notat" name="notat"
+                   placeholder="Legg til notat...">
+          </div>
+
+          <button type="submit" id="lagre-btn" class="btn btn-primary">Lagre utgift</button>
+          <div id="melding" role="alert" aria-live="polite"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Eksporter til CSV</h2>
+        <div class="eksport-rad">
+          <div class="field">
+            <label for="eksport-ar">År</label>
+            <input type="number" id="eksport-ar" min="2020" max="2099" step="1">
+          </div>
+          <div class="field">
+            <label for="eksport-maned">Måned</label>
+            <select id="eksport-maned">
+              <option value="">Alle måneder</option>
+              <option value="1">Januar</option>
+              <option value="2">Februar</option>
+              <option value="3">Mars</option>
+              <option value="4">April</option>
+              <option value="5">Mai</option>
+              <option value="6">Juni</option>
+              <option value="7">Juli</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" id="eksport-btn" class="btn btn-secondary">Last ned CSV</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
